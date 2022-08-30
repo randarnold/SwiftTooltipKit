@@ -13,7 +13,6 @@ DerivedData/
 /Demo/SwiftTooltipDemo/.DS_Store
 /Demo/SwiftTooltipDemo/.build
 /Demo/SwiftTooltipDemo/Packages
-/Demo/SwiftTooltipDemo/*.xcodeproj
 /Demo/SwiftTooltipDemo/xcuserdata/
 /Demo/SwiftTooltipDemo/DerivedData/
 /Demo/SwiftTooltipDemo/.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata

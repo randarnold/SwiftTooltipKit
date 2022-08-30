@@ -32,15 +32,15 @@ class ViewController: UIViewController {
         stackview.axis = .vertical
         stackview.distribution = .equalSpacing
         stackview.alignment = .fill
-        stackview.spacing = 15
+        stackview.spacing = 15.0
         return stackview
     }()
     
     let buttonColors: [UIColor] = [.purple, .blue, .cyan, .green, .orange]
     
     var smallTooltipConfig: Tooltip.ToolTipConfiguration = {
-        let smalltoolTipConfig = Tooltip.ToolTipConfiguration()
-        smalltoolTipConfig.labelConfiguration.preferredMaxLayoutWidth = 100
+        var smalltoolTipConfig = Tooltip.ToolTipConfiguration()
+        smalltoolTipConfig.labelConfiguration.preferredMaxLayoutWidth = 100.0
         return smalltoolTipConfig
     }()
 
@@ -48,9 +48,9 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         view.addSubview(buttonStackview)
-        buttonStackview.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 90).activate()
+        buttonStackview.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 90.0).activate()
         buttonStackview.centerXAnchor.constraint(equalTo: view.centerXAnchor).activate()
-        buttonStackview.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -90).activate()
+        buttonStackview.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -90.0).activate()
         
         populateView()
         
@@ -64,9 +64,9 @@ class ViewController: UIViewController {
             button.setTitle("Button \(index)", for: .normal)
             button.backgroundColor = buttonColors[index]
             button.tag = index
-            button.layer.cornerRadius = 10
+            button.layer.cornerRadius = 10.0
             button.clipsToBounds = true
-            button.widthAnchor.constraint(equalToConstant: 100).activate()
+            button.widthAnchor.constraint(equalToConstant: 100.0).activate()
             button.addTarget(self, action: #selector(didPressButton(_:)), for: .touchUpInside)
             buttonStackview.addArrangedSubview(button)
         }
@@ -75,20 +75,21 @@ class ViewController: UIViewController {
     @objc func didPressButton(_ sender: UIButton) {
         switch sender.tag {
         case 0:
-            sender.tooltip("A tootltip with top orientation", orientation: .top)
+            sender.tooltip("A tooltip with top orientation", orientation: .top)
         case 1:
             let imageView = UIImageView()
-            imageView.image = UIImage(systemName: "heart.fill")!.withRenderingMode(.alwaysTemplate)
+            imageView.image = UIImage(named: "heart.fill")!.withRenderingMode(.alwaysTemplate)
             imageView.tintColor = .red
             sender.tooltip(imageView, orientation: .right)
             sender.tooltip("Display custom views in the tooltip", orientation: .left, configuration: smallTooltipConfig)
         case 2:
-            sender.tooltip("A tootltip with custom configuration", orientation: .top, configuration: { configuration in
+            sender.tooltip("A tooltip with custom configuration", orientation: .top, configuration: { configuration in
+                var configuration = configuration
                 configuration.backgroundColor = sender.backgroundColor!
-                configuration.cornerRadius = 0
+                configuration.cornerRadius = 0.0
                 configuration.animationConfiguration.animationDuration = 1.25
                 configuration.labelConfiguration.textColor = .black
-                configuration.labelConfiguration.font = .systemFont(ofSize: 14, weight: .semibold)
+                configuration.labelConfiguration.font = .systemFont(ofSize: 14.0, weight: .semibold)
                 return configuration
             })
         case 3:

@@ -7,7 +7,7 @@
 | --- | ----------- |
 
 # Description
-SwiftTooltipKit is written in Swift and offers customizable tooltips out-of-the-box for iOS projects. It is easy to setup, light-weight and compatible with any project with or above iOS v10.
+SwiftTooltipKit is written in Swift and offers customizable tooltips out-of-the-box for iOS projects. It is easy to setup, light-weight and compatible with any project with or above iOS v13.
 
 ## Features
 

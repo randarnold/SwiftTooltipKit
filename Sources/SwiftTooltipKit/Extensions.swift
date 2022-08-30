@@ -21,6 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import OSLog
 #if canImport(UIKit)
 import UIKit
 
@@ -60,7 +61,7 @@ extension UIView {
     /// Returns true, if the calling UIView has an active tooltip.
     /// True if there is currently a tooltip presented that has the calling view as `presentingView`.
     public var hasActiveTooltip: Bool {
-        guard let activeTooltips = UIApplication.shared.keyWindow?.subviews.filter({ $0 is Tooltip }),
+        guard let activeTooltips = window?.subviews.filter({ $0 is Tooltip }),
               !activeTooltips.isEmpty else { return false }
         
         return activeTooltips.compactMap { $0 as? Tooltip }.contains(where: { $0.presentingView == self })
@@ -73,9 +74,35 @@ extension UIView {
     /// - Parameter configuration: The configuration allowing to customize the tooltip
     public func tooltip(_ view: UIView, orientation: Tooltip.Orientation, configuration: Tooltip.ToolTipConfiguration = Tooltip.ToolTipConfiguration()) {
         guard !hasActiveTooltip else { return }
+
         let toolTip = Tooltip(view: view, presentingView: self, orientation: orientation, configuration: configuration)
         
-        UIApplication.shared.keyWindow?.addSubview(toolTip)
+        if #available(iOS 13, *) {
+            if let window = window {
+                window.addSubview(toolTip)
+            } else if UIApplication.shared.supportsMultipleScenes {
+                os_log("Support for multiple scenes not implemented", type: .error)
+            } else {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    guard windowScene.windows.count == 1 else {
+                        os_log("Support for multiple windows not implemented", type: .error)
+                        return
+                    }
+                    if let window = windowScene.windows.first {
+                        window.addSubview(toolTip)
+                    }
+                }
+            }
+        } else {
+            if let window = window {
+                window.addSubview(toolTip)
+            } else if let window = UIApplication.shared.keyWindow {
+                window.addSubview(toolTip)
+            } else {
+                assertionFailure("No window available, did you set before viewDidAppear()?")
+            }
+        }
+
         toolTip.present()
     }
     
@@ -95,9 +122,33 @@ extension UIView {
         label.preferredMaxLayoutWidth = configuration.labelConfiguration.preferredMaxLayoutWidth
         
         let toolTip = Tooltip(view: label, presentingView: self, orientation: orientation, configuration: configuration)
-        
-        UIApplication.shared.keyWindow?.addSubview(toolTip)
-        
+
+        if #available(iOS 13, *) {
+            if let window = window {
+                window.addSubview(toolTip)
+            } else if UIApplication.shared.supportsMultipleScenes {
+                os_log("Support for multiple scenes not implemented", type: .error)
+            } else {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                    guard windowScene.windows.count == 1 else {
+                        os_log("Support for multiple windows not implemented", type: .error)
+                        return
+                    }
+                    if let window = windowScene.windows.first {
+                        window.addSubview(toolTip)
+                    }
+                }
+            }
+        } else {
+            if let window = window {
+                window.addSubview(toolTip)
+            } else if let window = UIApplication.shared.keyWindow {
+                window.addSubview(toolTip)
+            } else {
+                assertionFailure("No window available, did you set before viewDidAppear()?")
+            }
+        }
+
         toolTip.present()
     }
     
@@ -172,12 +223,14 @@ extension UIBarItem {
 }
 
 extension Tooltip {
-    /// Dismisses all tooltips that are currently shown on any sub view in the `keyWindow`.
+    /// Dismisses all tooltips that are currently shown on any sub view in the `window`.
     public static func dismissAll() {
-        guard let activeTooltips = UIApplication.shared.keyWindow?.subviews.filter({ $0 is Tooltip }),
-              !activeTooltips.isEmpty else { return }
-        
-        activeTooltips.compactMap { $0 as? Tooltip }.forEach { $0.dismiss() }
+
+        for window in UIApplication.shared.windows {
+            let activeTooltips = window.subviews.filter({ $0 is Tooltip })
+
+            activeTooltips.compactMap { $0 as? Tooltip }.forEach { $0.dismiss() }
+        }
     }
 }
 

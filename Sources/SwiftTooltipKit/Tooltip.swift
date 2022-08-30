@@ -25,36 +25,40 @@
 import Foundation
 import UIKit
 
-fileprivate let TooltipLayerIdentifier: String = "toolTipID"
-fileprivate let margin: CGFloat = 16
-
 open class Tooltip: UIView {
-    
+
+    private static let TooltipLayerIdentifier: String = "toolTipID"
+    private static let margin: CGFloat = 16.0
+
     public enum Orientation {
-        case top, bottom, left, right
+        case top, bottom, left, right, leading, trailing
     }
     
     private enum AdjustmentType {
         case left, right, top, bottom
     }
-    
+
+    /// content of the tool tip, e.g. a label or image
     public private(set) var contentView: UIView!
     
-    public private(set) var presentingView: UIView?
+    public private(set) var presentingView: UIView!
     
     public private(set) var configuration: ToolTipConfiguration!
-    
+
+    /// The initial orientation for the tooltip
     public private(set) var orientation: Orientation = .top
     
     private var presentingViewFrame: CGRect {
-        guard let presentingView = presentingView,
-                let topVC = UIApplication.getTopViewController() else { return .zero }
-        return presentingView.convert(presentingView.bounds, to: topVC.view)
+        guard let presentingView = presentingView else { return .zero }
+        return presentingView.convert(presentingView.bounds, to: window)
     }
     
     private var adjustmentTypes: Set<AdjustmentType> = []
-    
-    private var originXValue: CGFloat {
+
+    /// - Parameter orientation: The current orientation of the tooltip.
+    /// - Returns: The x value of the origin
+
+    private func originXValue(orientation: Orientation) -> CGFloat {
         switch orientation {
         case .top, .bottom:
             return presentingViewFrame.midX
@@ -62,24 +66,48 @@ open class Tooltip: UIView {
             return presentingViewFrame.maxX + configuration.offset
         case .left:
             return presentingViewFrame.minX - configuration.offset
+        case .leading:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                return presentingViewFrame.maxX + configuration.offset
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                return presentingViewFrame.minX - configuration.offset
+            }
+        case .trailing:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                return presentingViewFrame.minX - configuration.offset
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                return presentingViewFrame.maxX + configuration.offset
+            }
         }
     }
-    
-    private var originYValue: CGFloat {
+
+    /// - Parameter orientation: The current orientation of the tooltip.
+    /// - Return: the y value of the origin
+
+    private func originYValue(orientation: Orientation) -> CGFloat {
         switch orientation {
         case .top:
             return presentingViewFrame.minY - configuration.offset
         case .bottom:
             return presentingViewFrame.maxY + configuration.offset
-        case .left, .right:
+        case .left, .right, .leading, .trailing:
             return presentingViewFrame.midY
         }
     }
     
-    private var remainingOrientations: [Orientation] = [.top, .bottom, .right, .left]
+    private var remainingOrientations: [Orientation] = [.top, .bottom, .right, .left, .leading, .trailing]
     
-    private var nextOrientation: Orientation {
-        
+    /// - Parameter orientation: The current orientation of the tooltip.
+    /// - Returns: The next orientation
+    ///
+    private func nextOrientation(orientation: Orientation) -> Orientation {
+
         var rndElement: Orientation {
             remainingOrientations.randomElement() ?? .top
         }
@@ -97,15 +125,26 @@ open class Tooltip: UIView {
         case .right:
             remainingOrientations = remainingOrientations.remove(.right)
             return remainingOrientations.contains(.left) ? .left : rndElement
+        case .leading:
+            remainingOrientations = remainingOrientations.remove(.leading)
+            return remainingOrientations.contains(.trailing) ? .trailing : rndElement
+        case .trailing:
+            remainingOrientations = remainingOrientations.remove(.trailing)
+            return remainingOrientations.contains(.leading) ? .leading : rndElement
         }
     }
-    
-    private var hasVerticalOrientation: Bool {
-        orientation == .top || orientation == .bottom
+
+    /// - Parameter orientation: The current orientation of the tooltip.
+    /// - Returns: A boolean, true if the orientation is verticle
+    private func hasVerticalOrientation(orientation: Orientation) -> Bool {
+        return orientation == .top || orientation == .bottom
     }
-    
-    private var hasHorizontalOrientation: Bool {
-        orientation == .left || orientation == .right
+
+    /// - Parameter orientation: The current orientation of the tooltip.
+    /// - Returns: A boolean, true if the orientation is horizontal
+
+    private func hasHorizontalOrientation(orientation: Orientation) -> Bool {
+        return orientation == .left || orientation == .right || orientation == .leading || orientation == .trailing
     }
     
     public convenience init(view: UIView, presentingView: UIView, orientation: Orientation, configuration: ((ToolTipConfiguration) -> ToolTipConfiguration)) {
@@ -147,30 +186,39 @@ open class Tooltip: UIView {
         backgroundColor = configuration.backgroundColor
         
         // animate showing
-        alpha = 0
+        alpha = 0.0
         
         // If configured, handles automatic dismissal
-        handleAutomaticDismissalIfNedded()
+        handleAutomaticDismissalIfNeeded()
     }
     
     /// If the custom view contains a label that has no `preferredMaxLayoutWidth` set, it can happen that its width > screen size width.
-    /// To prevent that artifically adjust the `preferredMaxLayoutWidth` to stay within bounds.
+    /// To prevent that artificially adjust the `preferredMaxLayoutWidth` to stay within bounds.
     private func adjustPreferredMaxLayoutWidthIfPossible() {
+
         let labels = contentView.subviews
             .compactMap { $0 as? UILabel }
-        let filterLabels = labels.filter { $0.preferredMaxLayoutWidth == 0 ||
-                $0.preferredMaxLayoutWidth > UIScreen.main.bounds.width - margin*2 ||
-            $0.intrinsicContentSize.width > UIScreen.main.bounds.width - margin*2 }
+
+        let filterLabels = labels.filter { $0.preferredMaxLayoutWidth == 0.0 ||
+            $0.preferredMaxLayoutWidth > UIScreen.main.bounds.width - Tooltip.margin*2.0 ||
+            $0.intrinsicContentSize.width > UIScreen.main.bounds.width - Tooltip.margin*2.0 }
+
         filterLabels.forEach {
-            $0.preferredMaxLayoutWidth = UIScreen.main.bounds.width - margin*2
+            if $0.preferredMaxLayoutWidth != UIScreen.main.bounds.width - Tooltip.margin*2.0 {
+                $0.preferredMaxLayoutWidth = UIScreen.main.bounds.width - Tooltip.margin*2.0
+                contentView.setNeedsLayout()
+            }
         }
     
-        contentView.setNeedsLayout()
         contentView.layoutIfNeeded()
     }
     
     /// Computes the original frame of the tooltip.
-    private func computeFrame() {
+    /// - Parameter orientation: The current orientation of the tooltip.
+    /// - Returns: A tuple of the adjusted rect and the adjusted orientation
+
+    private func computeFrame(orientation: Orientation) -> (rect: CGRect, orientation: Orientation) {
+
         adjustPreferredMaxLayoutWidthIfPossible()
         
         let viewSize = contentView.boundsOrIntrinsicContentSize
@@ -179,16 +227,40 @@ open class Tooltip: UIView {
         switch orientation {
         case .top:
             // take tipsize into account
-            origin = CGPoint(x: originXValue - viewSize.width/2, y: originYValue - viewSize.height)
+            origin = CGPoint(x: originXValue(orientation: orientation) - viewSize.width/2.0, y: originYValue(orientation: orientation) - viewSize.height)
         case .bottom:
-            origin = CGPoint(x: originXValue - viewSize.width/2, y: originYValue)
+            origin = CGPoint(x: originXValue(orientation: orientation) - viewSize.width/2.0, y: originYValue(orientation: orientation))
         case .left:
-            origin = CGPoint(x: originXValue - viewSize.width, y: originYValue - viewSize.height/2)
+            origin = CGPoint(x: originXValue(orientation: orientation) - viewSize.width, y: originYValue(orientation: orientation) - viewSize.height/2.0)
         case .right:
-            origin = CGPoint(x: originXValue, y: originYValue - viewSize.height/2)
+            origin = CGPoint(x: originXValue(orientation: orientation), y: originYValue(orientation: orientation) - viewSize.height/2.0)
+        case .leading:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                origin = CGPoint(x: originXValue(orientation: orientation), y: originYValue(orientation: orientation) - viewSize.height/2.0)
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                origin = CGPoint(x: originXValue(orientation: orientation) - viewSize.width, y: originYValue(orientation: orientation) - viewSize.height/2.0)
+            }
+        case .trailing:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                origin = CGPoint(x: originXValue(orientation: orientation) - viewSize.width, y: originYValue(orientation: orientation) - viewSize.height/2.0)
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                origin = CGPoint(x: originXValue(orientation: orientation), y: originYValue(orientation: orientation) - viewSize.height/2.0)
+            }
         }
         
-        self.frame = validateRect(CGRect(x: origin.x, y: origin.y, width: viewSize.width, height: viewSize.height), adjustedX: origin.x, adjustedY: origin.y, orientation: orientation)
+        let result = validateRect(CGRect(x: origin.x, y: origin.y, width: viewSize.width, height: viewSize.height), adjustedX: origin.x, adjustedY: origin.y, orientation: orientation)
+
+        if result.orientation != orientation {
+            return computeFrame(orientation: result.orientation)
+        }
+
+        return result
     }
     
     /// Validates the tooltip frame and updates frame and/or orientation if it's necessary.
@@ -196,75 +268,104 @@ open class Tooltip: UIView {
     /// - Parameter adjustedX: the x coordinate of the rect's origin
     /// - Parameter adjustedY: the y coordinate of the rect's origin
     /// - Parameter orientation: The current orientation of the tooltip.
-    private func validateRect(_ rect: CGRect, adjustedX: CGFloat, adjustedY: CGFloat, orientation: Orientation) -> CGRect {
+    /// - Returns: A tuple of the adjusted rect and the adjusted orientation
+    private func validateRect(_ rect: CGRect, adjustedX: CGFloat, adjustedY: CGFloat, orientation: Orientation) -> (rect: CGRect, orientation: Orientation) {
+
+        var orientation = orientation
         let screenBounds = UIScreen.main.bounds
-        let globlSafeAreasInsets: UIEdgeInsets
-        if #available(iOS 11.0, *) {
-            globlSafeAreasInsets = UIApplication.shared.keyWindow!.safeAreaInsets
-        } else {
-            // Fallback on earlier versions
-            globlSafeAreasInsets = .zero
-        }
-        
-        precondition(rect.width <= screenBounds.width - margin*2, warningMsg())
-        precondition(rect.height <= screenBounds.height - margin*2 - globlSafeAreasInsets.top - globlSafeAreasInsets.bottom, warningMsg())
+        let globalSafeAreasInsets = safeAreaInsets
+
+        precondition(rect.width <= screenBounds.width - Tooltip.margin*2.0, warningMsg())
+        precondition(rect.height <= screenBounds.height - Tooltip.margin*2.0 - globalSafeAreasInsets.top - globalSafeAreasInsets.bottom, warningMsg())
         
         switch orientation {
         case .top:
-            if contentView.boundsOrIntrinsicContentSize.height + margin + globlSafeAreasInsets.top > presentingViewFrame.minY {
-                self.orientation = nextOrientation(for: orientation)
+            if contentView.boundsOrIntrinsicContentSize.height + Tooltip.margin + globalSafeAreasInsets.top > presentingViewFrame.minY {
+                orientation = nextOrientation(for: orientation)
             }
         case .bottom:
-            if screenBounds.height - contentView.boundsOrIntrinsicContentSize.height - margin - globlSafeAreasInsets.bottom < presentingViewFrame.maxY {
-                self.orientation = nextOrientation(for: orientation)
+            if screenBounds.height - contentView.boundsOrIntrinsicContentSize.height - Tooltip.margin - globalSafeAreasInsets.bottom < presentingViewFrame.maxY {
+                orientation = nextOrientation(for: orientation)
             }
             
         case .left:
-            if contentView.boundsOrIntrinsicContentSize.width + margin + globlSafeAreasInsets.left > presentingViewFrame.minX {
-                self.orientation = nextOrientation(for: orientation)
+            if contentView.boundsOrIntrinsicContentSize.width + Tooltip.margin + globalSafeAreasInsets.left > presentingViewFrame.minX {
+                orientation = nextOrientation(for: orientation)
             }
         case .right:
-            if screenBounds.width - contentView.boundsOrIntrinsicContentSize.width - margin - globlSafeAreasInsets.bottom <  presentingViewFrame.maxX {
-                self.orientation = nextOrientation(for: orientation)
+            if screenBounds.width - contentView.boundsOrIntrinsicContentSize.width - Tooltip.margin - globalSafeAreasInsets.bottom <  presentingViewFrame.maxX {
+                orientation = nextOrientation(for: orientation)
+            }
+        case .leading:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                if screenBounds.width - contentView.boundsOrIntrinsicContentSize.width - Tooltip.margin - globalSafeAreasInsets.bottom <  presentingViewFrame.maxX {
+                    orientation = nextOrientation(for: orientation)
+                }
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                if contentView.boundsOrIntrinsicContentSize.width + Tooltip.margin + globalSafeAreasInsets.left > presentingViewFrame.minX {
+                    orientation = nextOrientation(for: orientation)
+                }
+            }
+
+        case .trailing:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                    if contentView.boundsOrIntrinsicContentSize.width + Tooltip.margin + globalSafeAreasInsets.left > presentingViewFrame.minX {
+                        orientation = nextOrientation(for: orientation)
+                    }
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                if screenBounds.width - contentView.boundsOrIntrinsicContentSize.width - Tooltip.margin - globalSafeAreasInsets.bottom <  presentingViewFrame.maxX {
+                    orientation = nextOrientation(for: orientation)
+                }
             }
         }
         
-        if adjustedY < margin + globlSafeAreasInsets.top {
+        if adjustedY < Tooltip.margin + globalSafeAreasInsets.top {
             adjustmentTypes.insert(.top)
             return validateRect(
                 rect,
                 adjustedX: adjustedX,
-                adjustedY: margin + globlSafeAreasInsets.top,
-                orientation: self.orientation
+                adjustedY: Tooltip.margin + globalSafeAreasInsets.top,
+                orientation: orientation
             )
-        } else if adjustedY > screenBounds.height - margin - globlSafeAreasInsets.bottom {
+        } else if adjustedY > screenBounds.height - Tooltip.margin - globalSafeAreasInsets.bottom {
             adjustmentTypes.insert(.bottom)
             return validateRect(
                 rect,
                 adjustedX: adjustedX,
-                adjustedY: screenBounds.height - margin - globlSafeAreasInsets.bottom,
-                orientation: self.orientation
+                adjustedY: screenBounds.height - Tooltip.margin - globalSafeAreasInsets.bottom,
+                orientation: orientation
             )
-        } else if adjustedX < margin {
+        } else if adjustedX < Tooltip.margin {
             adjustmentTypes.insert(.left)
             return validateRect(
                 rect,
-                adjustedX: margin,
+                adjustedX: Tooltip.margin,
                 adjustedY: adjustedY,
-                orientation: self.orientation
+                orientation: orientation
             )
-        } else if adjustedX > screenBounds.width - margin - contentView.boundsOrIntrinsicContentSize.width {
+        } else if adjustedX > screenBounds.width - Tooltip.margin - contentView.boundsOrIntrinsicContentSize.width {
             adjustmentTypes.insert(.right)
             return validateRect(
                 rect,
-                adjustedX: screenBounds.width - margin - contentView.boundsOrIntrinsicContentSize.width,
+                adjustedX: screenBounds.width - Tooltip.margin - contentView.boundsOrIntrinsicContentSize.width,
                 adjustedY: adjustedY,
-                orientation: self.orientation            )
+                orientation: orientation
+            )
         }
-        return CGRect(origin: CGPoint(x: adjustedX, y: adjustedY), size: rect.size)
+        return (CGRect(origin: CGPoint(x: adjustedX, y: adjustedY), size: rect.size), orientation)
     }
     
     private var orientationsTried: Set<Orientation> = []
+
+    /// - Parameter prevOrientation: The current orientation of the tooltip.
+    /// - Returns: The new adjusted orientation
+
     private func nextOrientation(for prevOrientation: Orientation) -> Orientation {
         switch prevOrientation {
         case .top:
@@ -283,12 +384,20 @@ open class Tooltip: UIView {
             orientationsTried.insert(.right)
             if !orientationsTried.contains(.left) { return .left }
             return .top
+        case .leading:
+            orientationsTried.insert(.leading)
+            if !orientationsTried.contains(.trailing) { return .trailing }
+            return .top
+        case .trailing:
+            orientationsTried.insert(.trailing)
+            if !orientationsTried.contains(.leading) { return .leading }
+            return .top
         }
     }
     
-    private func handleAutomaticDismissalIfNedded() {
+    private func handleAutomaticDismissalIfNeeded() {
         guard configuration.dismissAutomatically else { return }
-        Timer.scheduledTimer(withTimeInterval: configuration.timeToDimiss, repeats: false, block: { [weak self] _ in
+        Timer.scheduledTimer(withTimeInterval: configuration.timeToDismiss, repeats: false, block: { [weak self] _ in
             self?.dismiss()
         })
     }
@@ -298,83 +407,114 @@ open class Tooltip: UIView {
         
         contentView.layoutIfNeeded()
         
-        computeFrame()
-        drawToolTip()
+        let result = computeFrame(orientation: orientation)
+        self.frame = result.rect
+        drawToolTip(orientation: result.orientation)
     }
     
-    /*
-     Draws the rect of the tooltip
-     */
-    private func drawToolTip() {
+    /// Draws the rect of the tooltip
+    /// - Parameter orientation: The current orientation of the tooltip.
+
+    private func drawToolTip(orientation: Orientation) {
         // remove previously added layers to prevent double drawing
-        self.layer.sublayers?.removeAll(where: { $0.name == TooltipLayerIdentifier })
-        let rect = self.bounds
+        self.layer.sublayers?.removeAll(where: { $0.name == Tooltip.TooltipLayerIdentifier })
+        let bounds = self.bounds
         let inset = configuration.inset
-        let roundRect = CGRect(x: rect.minX - inset, y: rect.minY - inset, width: rect.width + inset * 2, height: rect.height + inset * 2)
+        let roundRect = CGRect(x: bounds.minX - inset, y: bounds.minY - inset, width: bounds.width + inset * 2.0, height: bounds.height + inset * 2.0)
         let roundRectBez = UIBezierPath(roundedRect: roundRect, cornerRadius: 5.0)
         
         if configuration.showTip {
-            let trianglePath = drawTip()
+            let trianglePath = drawTip(bounds: bounds, orientation: orientation)
             roundRectBez.append(trianglePath)
         }
-        roundRectBez.lineWidth = 2
+        roundRectBez.lineWidth = 2.0
         
         let shape = createShapeLayer(roundRectBez.cgPath)
         self.layer.insertSublayer(shape, at: 0)
     }
     
-    /*
-     Draws the tip of the tooltip fitting the specified orientation
-     */
-    private func drawTip() -> UIBezierPath {
+    /// Draws the tip of the tooltip fitting the specified orientation
+    /// - Parameter bounds: The bounds of the tooltip
+    /// - Parameter orientation: The current orientation of the tooltip.
+    /// - Returns: The bezier path of the tip
+    private func drawTip(bounds: CGRect, orientation: Orientation) -> UIBezierPath {
         let tipPath = UIBezierPath()
         let tipSize = configuration.tipSize
         let inset = configuration.inset
-        let rect = self.bounds
+
+        let convertedPresentingFrame = presentingView.convert(presentingView.frame, to: self)
         
-        let convertedPresentingFrame = presentingView!.convert(presentingView!.bounds, to: self)
-        
-        var xValueCenter: CGFloat = rect.midX
-        var yValueCenter: CGFloat = rect.midY
+        var xValueCenter: CGFloat = bounds.midX
+        var yValueCenter: CGFloat = bounds.midY
         
         switch orientation {
         case .top, .bottom:
-            xValueCenter = rect.midX
-        case .left, .right:
-            xValueCenter = rect.minY
+            xValueCenter = bounds.midX
+        case .left, .right, .leading, .trailing:
+            xValueCenter = bounds.minY
         }
         
         for adjustmentType in adjustmentTypes {
-            if (adjustmentType == .right || adjustmentType == .left) && hasVerticalOrientation {
+            if (adjustmentType == .right || adjustmentType == .left) && hasVerticalOrientation(orientation: orientation) {
                 xValueCenter = convertedPresentingFrame.midX
             }
             
-            if (adjustmentType == .top || adjustmentType == .bottom) && hasHorizontalOrientation {
+            if (adjustmentType == .top || adjustmentType == .bottom) && hasHorizontalOrientation(orientation: orientation) {
                 yValueCenter = convertedPresentingFrame.midY
             }
         }
         
         switch orientation {
         case .top:
-            tipPath.move(to: CGPoint(x: xValueCenter - tipSize.width/2, y: rect.maxY + inset ))
-            tipPath.addLine(to: CGPoint(x: xValueCenter + tipSize.width/2, y: rect.maxY + inset ))
-            tipPath.addLine(to: CGPoint(x: xValueCenter, y: rect.maxY + tipSize.height ))
-            tipPath.addLine(to: CGPoint(x: xValueCenter - tipSize.width/2, y: rect.maxY + inset ))
+                tipPath.move(to: CGPoint(x: xValueCenter - tipSize.width/2.0, y: bounds.maxY + inset ))
+            tipPath.addLine(to: CGPoint(x: xValueCenter + tipSize.width/2.0, y: bounds.maxY + inset ))
+            tipPath.addLine(to: CGPoint(x: xValueCenter, y: bounds.maxY + tipSize.height ))
+            tipPath.addLine(to: CGPoint(x: xValueCenter - tipSize.width/2.0, y: bounds.maxY + inset ))
         case .bottom:
-            tipPath.move(to: CGPoint(x: xValueCenter - tipSize.width/2, y: rect.minY - inset))
-            tipPath.addLine(to: CGPoint(x: xValueCenter + tipSize.width/2, y: rect.minY - inset))
-            tipPath.addLine(to: CGPoint(x: xValueCenter, y: rect.minY - tipSize.height ))
-            tipPath.addLine(to: CGPoint(x: xValueCenter - tipSize.width/2, y: rect.minY - inset))
+            tipPath.move(to: CGPoint(x: xValueCenter - tipSize.width/2.0, y: bounds.minY - inset))
+            tipPath.addLine(to: CGPoint(x: xValueCenter + tipSize.width/2.0, y: bounds.minY - inset))
+            tipPath.addLine(to: CGPoint(x: xValueCenter, y: bounds.minY - tipSize.height ))
+            tipPath.addLine(to: CGPoint(x: xValueCenter - tipSize.width/2.0, y: bounds.minY - inset))
         case .left:
-            tipPath.move(to: CGPoint(x: rect.maxX + inset, y: yValueCenter - tipSize.height/2 ))
-            tipPath.addLine(to: CGPoint(x: rect.maxX + inset, y: yValueCenter + tipSize.height/2 ))
-            tipPath.addLine(to: CGPoint(x: rect.maxX + tipSize.height, y: yValueCenter ))
-            tipPath.addLine(to: CGPoint(x: rect.maxX + inset, y: yValueCenter - tipSize.height/2 ))
+            tipPath.move(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter - tipSize.height/2.0 ))
+            tipPath.addLine(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter + tipSize.height/2.0 ))
+            tipPath.addLine(to: CGPoint(x: bounds.maxX + tipSize.height, y: yValueCenter ))
+            tipPath.addLine(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter - tipSize.height/2.0 ))
         case .right:
-            tipPath.move(to: CGPoint(x: rect.minX - inset, y: yValueCenter - tipSize.height/2 ))
-            tipPath.addLine(to: CGPoint(x: rect.minX - inset, y: yValueCenter + tipSize.height/2 ))
-            tipPath.addLine(to: CGPoint(x: rect.minX - tipSize.height, y: yValueCenter ))
-            tipPath.addLine(to: CGPoint(x: rect.minX - inset, y: yValueCenter - tipSize.height/2 ))
+            tipPath.move(to: CGPoint(x: bounds.minX - inset, y: yValueCenter - tipSize.height/2.0 ))
+            tipPath.addLine(to: CGPoint(x: bounds.minX - inset, y: yValueCenter + tipSize.height/2.0 ))
+            tipPath.addLine(to: CGPoint(x: bounds.minX - tipSize.height, y: yValueCenter ))
+            tipPath.addLine(to: CGPoint(x: bounds.minX - inset, y: yValueCenter - tipSize.height/2.0 ))
+        case .leading:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                tipPath.move(to: CGPoint(x: bounds.minX - inset, y: yValueCenter - tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.minX - inset, y: yValueCenter + tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.minX - tipSize.height, y: yValueCenter ))
+                tipPath.addLine(to: CGPoint(x: bounds.minX - inset, y: yValueCenter - tipSize.height/2.0 ))
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                tipPath.move(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter - tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter + tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.maxX + tipSize.height, y: yValueCenter ))
+                tipPath.addLine(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter - tipSize.height/2.0 ))
+            }
+        case .trailing:
+            switch effectiveUserInterfaceLayoutDirection {
+            case .rightToLeft:
+                tipPath.move(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter - tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter + tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.maxX + tipSize.height, y: yValueCenter ))
+                tipPath.addLine(to: CGPoint(x: bounds.maxX + inset, y: yValueCenter - tipSize.height/2.0 ))
+            case .leftToRight:
+                fallthrough
+            @unknown default:
+                tipPath.move(to: CGPoint(x: bounds.minX - inset, y: yValueCenter - tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.minX - inset, y: yValueCenter + tipSize.height/2.0 ))
+                tipPath.addLine(to: CGPoint(x: bounds.minX - tipSize.height, y: yValueCenter ))
+                tipPath.addLine(to: CGPoint(x: bounds.minX - inset, y: yValueCenter - tipSize.height/2.0 ))
+            }
         }
         
         tipPath.close()
@@ -389,7 +529,7 @@ open class Tooltip: UIView {
         shape.shadowOffset = configuration.shadowConfiguration.shadowOffset
         shape.shadowRadius = configuration.cornerRadius
         shape.shadowOpacity = configuration.shadowConfiguration.shadowOpacity
-        shape.name = TooltipLayerIdentifier
+        shape.name = Tooltip.TooltipLayerIdentifier
         return shape
     }
     
@@ -400,7 +540,7 @@ open class Tooltip: UIView {
             delay: configuration.animationConfiguration.animationDelay,
             options: configuration.animationConfiguration.animationOptions,
             animations: { [weak self] in
-                self?.alpha = 0
+                self?.alpha = 0.0
                 self?.configuration.onDismiss?()
             },
             completion: { [weak self] _ in
@@ -418,7 +558,7 @@ open class Tooltip: UIView {
             options: configuration.animationConfiguration.animationOptions,
             animations: { [unowned self] in
                 self.configuration.onPresent?()
-                self.alpha = 1
+                self.alpha = 1.0
             }
         )
     }
