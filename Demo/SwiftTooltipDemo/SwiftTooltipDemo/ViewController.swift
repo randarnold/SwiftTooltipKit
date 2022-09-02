@@ -36,7 +36,7 @@ class ViewController: UIViewController {
         return stackview
     }()
     
-    let buttonColors: [UIColor] = [.purple, .blue, .cyan, .green, .orange]
+    let buttonColors: [UIColor] = [.purple, .blue, .cyan, .green, .orange, .magenta, .purple]
     
     var smallTooltipConfig: Tooltip.ToolTipConfiguration = {
         var smalltoolTipConfig = Tooltip.ToolTipConfiguration()
@@ -59,7 +59,7 @@ class ViewController: UIViewController {
     }
 
     private func populateView() {
-        for index in 0..<5 {
+        for index in 0..<buttonColors.count {
             let button = UIButton()
             button.setTitle("Button \(index)", for: .normal)
             button.backgroundColor = buttonColors[index]
@@ -96,6 +96,10 @@ class ViewController: UIViewController {
             sender.tooltip("Original .left Orientation is updated automatically because of layout constraints", orientation: .left)
         case 4:
             sender.tooltip("Define the width of a tooltip dynamically", orientation: .left, configuration: smallTooltipConfig)
+        case 5:
+            sender.tooltip("A tooltip with leading orientation", orientation: .leading, configuration: smallTooltipConfig)
+        case 6:
+            sender.tooltip("A tooltip with trailing orientation", orientation: .trailing, configuration: smallTooltipConfig)
         default:
             break
         }

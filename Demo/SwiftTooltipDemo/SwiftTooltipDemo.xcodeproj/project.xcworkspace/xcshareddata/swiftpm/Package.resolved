@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "swifttooltipkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/randarnold/SwiftTooltipKit.git",
+      "state" : {
+        "branch" : "develop",
+        "revision" : "d8a90a723f45c70a6744cc8dc60c9de4c2751b22"
+      }
+    }
+  ],
+  "version" : 2
+}

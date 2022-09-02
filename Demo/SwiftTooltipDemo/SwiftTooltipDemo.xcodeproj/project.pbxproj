@@ -13,7 +13,7 @@
 		A41E187428B5995200BD21DD /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A41E187228B5995200BD21DD /* Main.storyboard */; };
 		A41E187628B5995300BD21DD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A41E187528B5995300BD21DD /* Assets.xcassets */; };
 		A41E187928B5995300BD21DD /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A41E187728B5995300BD21DD /* LaunchScreen.storyboard */; };
-		A424815528B7E22200E1C32B /* SwiftTooltipKit in Frameworks */ = {isa = PBXBuildFile; productRef = A424815428B7E22200E1C32B /* SwiftTooltipKit */; };
+		A4235DA328C1710F00F61EB4 /* SwiftTooltipKit in Frameworks */ = {isa = PBXBuildFile; productRef = A4235DA228C1710F00F61EB4 /* SwiftTooltipKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,7 +25,7 @@
 		A41E187528B5995300BD21DD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A41E187828B5995300BD21DD /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A41E187A28B5995300BD21DD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A424815628B7E29D00E1C32B /* SwiftTooltipKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = SwiftTooltipKit; path = ../..; sourceTree = "<group>"; };
+		A4235DA428C1713200F61EB4 /* SwiftTooltipKit */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = SwiftTooltipKit; path = ../..; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,7 +33,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A424815528B7E22200E1C32B /* SwiftTooltipKit in Frameworks */,
+				A4235DA328C1710F00F61EB4 /* SwiftTooltipKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,7 +44,7 @@
 			isa = PBXGroup;
 			children = (
 				A41E186B28B5995200BD21DD /* SwiftTooltipDemo */,
-				A424815628B7E29D00E1C32B /* SwiftTooltipKit */,
+				A4235DA428C1713200F61EB4 /* SwiftTooltipKit */,
 				A41E186A28B5995200BD21DD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,7 +88,7 @@
 			);
 			name = SwiftTooltipDemo;
 			packageProductDependencies = (
-				A424815428B7E22200E1C32B /* SwiftTooltipKit */,
+				A4235DA228C1710F00F61EB4 /* SwiftTooltipKit */,
 			);
 			productName = SwiftTooltipDemo;
 			productReference = A41E186928B5995200BD21DD /* SwiftTooltipDemo.app */;
@@ -119,7 +119,7 @@
 			);
 			mainGroup = A41E186028B5995200BD21DD;
 			packageReferences = (
-				A424815328B7E22200E1C32B /* XCRemoteSwiftPackageReference "SwiftTooltipKit" */,
+				A4235DA128C1710F00F61EB4 /* XCRemoteSwiftPackageReference "SwiftTooltipKit" */,
 			);
 			productRefGroup = A41E186A28B5995200BD21DD /* Products */;
 			projectDirPath = "";
@@ -368,20 +368,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		A424815328B7E22200E1C32B /* XCRemoteSwiftPackageReference "SwiftTooltipKit" */ = {
+		A4235DA128C1710F00F61EB4 /* XCRemoteSwiftPackageReference "SwiftTooltipKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/hendesi/SwiftTooltipKit";
+			repositoryURL = "https://github.com/randarnold/SwiftTooltipKit.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.2;
+				branch = develop;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A424815428B7E22200E1C32B /* SwiftTooltipKit */ = {
+		A4235DA228C1710F00F61EB4 /* SwiftTooltipKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A424815328B7E22200E1C32B /* XCRemoteSwiftPackageReference "SwiftTooltipKit" */;
+			package = A4235DA128C1710F00F61EB4 /* XCRemoteSwiftPackageReference "SwiftTooltipKit" */;
 			productName = SwiftTooltipKit;
 		};
 /* End XCSwiftPackageProductDependency section */
