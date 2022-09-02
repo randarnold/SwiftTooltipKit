@@ -28,7 +28,7 @@ import UIKit
 open class Tooltip: UIView {
 
     private static let TooltipLayerIdentifier: String = "toolTipID"
-    private static let margin: CGFloat = 16.0
+    static let margin: CGFloat = 16.0
 
     public enum Orientation {
         case top, bottom, left, right, leading, trailing
@@ -40,13 +40,16 @@ open class Tooltip: UIView {
 
     /// content of the tool tip, e.g. a label or image
     public private(set) var contentView: UIView!
-    
-    public private(set) var presentingView: UIView!
+
+    /// the view that owns the tooltip
+    public private(set) weak var presentingView: UIView!
     
     public private(set) var configuration: ToolTipConfiguration!
 
     /// The initial orientation for the tooltip
     public private(set) var orientation: Orientation = .top
+    /// The initial frame for the tooltip before any adjustments are applied
+    private var initialFrame = CGRect.zero
     
     private var presentingViewFrame: CGRect {
         guard let presentingView = presentingView else { return .zero }
@@ -178,10 +181,12 @@ open class Tooltip: UIView {
         
         contentView.translatesAutoresizingMaskIntoConstraints = false
         self.addSubview(contentView)
-        contentView.topAnchor.constraint(equalTo: self.topAnchor).isActive = true
-        contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor).isActive = true
-        contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor).isActive = true
-        contentView.bottomAnchor.constraint(equalTo: self.bottomAnchor).isActive = true
+        NSLayoutConstraint.activate([
+            contentView.topAnchor.constraint(equalTo: self.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+        ])
         
         backgroundColor = configuration.backgroundColor
         
@@ -253,8 +258,15 @@ open class Tooltip: UIView {
                 origin = CGPoint(x: originXValue(orientation: orientation), y: originYValue(orientation: orientation) - viewSize.height/2.0)
             }
         }
+
+        let rect = CGRect(x: origin.x, y: origin.y, width: viewSize.width, height: viewSize.height)
+
+        // The initialFrame is the frame before any offsets are applied, since it should never change, we set it just once.
+        if initialFrame == .zero {
+            initialFrame = rect
+        }
         
-        let result = validateRect(CGRect(x: origin.x, y: origin.y, width: viewSize.width, height: viewSize.height), adjustedX: origin.x, adjustedY: origin.y, orientation: orientation)
+        let result = validateRect(rect, adjustedX: origin.x, adjustedY: origin.y, orientation: orientation)
 
         if result.orientation != orientation {
             return computeFrame(orientation: result.orientation)
@@ -443,7 +455,7 @@ open class Tooltip: UIView {
         let inset = configuration.inset
 
         let convertedPresentingFrame = presentingView.convert(presentingView.frame, to: self)
-        
+
         var xValueCenter: CGFloat = bounds.midX
         var yValueCenter: CGFloat = bounds.midY
         
@@ -456,11 +468,11 @@ open class Tooltip: UIView {
         
         for adjustmentType in adjustmentTypes {
             if (adjustmentType == .right || adjustmentType == .left) && hasVerticalOrientation(orientation: orientation) {
-                xValueCenter = convertedPresentingFrame.midX
+                xValueCenter = bounds.midX + initialFrame.minX - frame.minX // The change from the initialFrame
             }
             
             if (adjustmentType == .top || adjustmentType == .bottom) && hasHorizontalOrientation(orientation: orientation) {
-                yValueCenter = convertedPresentingFrame.midY
+                yValueCenter = bounds.midY + initialFrame.minY - frame.minY // The change from the initialFrame
             }
         }
         
