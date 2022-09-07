@@ -122,7 +122,7 @@ extension UIView {
                 let centerYAnchor = tooltip.centerYAnchor.constraint(equalTo: self.centerYAnchor)
                 centerYAnchor.priority = .defaultHigh
                 NSLayoutConstraint.activate([
-                    tooltip.trailingAnchor.constraint(equalTo: self.leadingAnchor, constant: configuration.offset),
+                    tooltip.trailingAnchor.constraint(equalTo: self.leadingAnchor, constant: -configuration.offset),
                     centerYAnchor
                 ])
             case .trailing, .right:
@@ -136,7 +136,7 @@ extension UIView {
                 let centerXAnchor = tooltip.centerXAnchor.constraint(equalTo: self.centerXAnchor)
                 centerXAnchor.priority = .defaultHigh
                 NSLayoutConstraint.activate([
-                    tooltip.bottomAnchor.constraint(equalTo: self.topAnchor, constant: configuration.offset),
+                    tooltip.bottomAnchor.constraint(equalTo: self.topAnchor, constant: -configuration.offset),
                     centerXAnchor
                 ])
             case .bottom:
