@@ -454,8 +454,6 @@ open class Tooltip: UIView {
         let tipSize = configuration.tipSize
         let inset = configuration.inset
 
-        let convertedPresentingFrame = presentingView.convert(presentingView.frame, to: self)
-
         var xValueCenter: CGFloat = bounds.midX
         var yValueCenter: CGFloat = bounds.midY
         
